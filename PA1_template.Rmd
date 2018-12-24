@@ -1,0 +1,114 @@
+---
+title: "RepData_Project1"
+author: "Daniela Galatro"
+date: "December 21, 2018"
+output: html_document
+---
+
+##Assignment Steps
+1.Code for reading in the dataset and/or processing the data
+2.Histogram of the total number of steps taken each day
+3.Mean and median number of steps taken each day
+4.Time series plot of the average number of steps taken
+5.The 5-minute interval that, on average, contains the maximum number of steps
+6.Code to describe and show a strategy for imputing missing data
+7.Histogram of the total number of steps taken each day after missing values are imputed
+8.Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+
+##Step 1
+###Code for reading in the dataset and/or processing the data
+```{r, echo = TRUE}
+'Load the data'
+setwd("C:/Users/CocoCuchi/Desktop/JohnHopkins/Reproducible/Project1/repdata_data_activity")
+'No processing of the data is required; format is suitable for analysis'
+activity <-read.csv("activity.csv")
+```
+
+##Step 2
+###Histogram of the total number of steps taken each day
+```{r, echo = TRUE}
+'Estimate number of steps taken per day, removing NAs'
+stepsday <- aggregate(steps ~ date, data = activity, FUN = sum, na.rm = TRUE)
+'Plotting histogram'
+png("plot1.png")
+  hist(stepsday$steps, xlab = "Steps per Day", ylim=c(0,30),main = "Total number of steps taken per day", labels=TRUE, col = "blue4")
+dev.off()
+
+```
+
+##Step 3
+###Mean and median number of steps taken each day
+```{r, echo = TRUE}
+mean.steps <- format(mean(stepsday$steps),digits=1)
+median.steps <- format(median(stepsday$steps),digits=1)
+'Report mean and media of number of steps taken each interval'
+mean.steps
+median.steps
+```
+
+##Step 4
+###Time series plot of the average number of steps taken
+```{r, echo = TRUE}
+steps.mean <- aggregate(steps ~ interval, data = activity, FUN = mean, na.rm = TRUE)
+png("plot4.png")
+  plot(steps.mean$interval, steps.mean$steps, type = "b", col = "blue4", xlab = "Intervals", ylab = "Total steps per interval", main = "Number of steps per interval (averaged)")
+dev.off()
+```
+##Step 5
+###The 5-minute interval that, on average, contains the maximum number of steps
+```{r, echo = TRUE}
+max.steps <-max(steps.mean$steps)
+max.interval <-steps.mean$interval[which(steps.mean$steps == max.steps)]
+max.steps=round(max.steps,0)
+'Report values'
+max.steps
+max.interval
+```
+##Step 6
+###Code to describe and show a strategy for imputing missing data
+```{r, echo = TRUE}
+Steps.Interval <- tapply(activity$steps, activity$interval, mean, na.rm = TRUE)
+# Split activity data per interval and fill missing data
+splitdata <- split(activity, activity$interval)
+for(i in 1:length(splitdata)){
+    splitdata[[i]]$steps[is.na(splitdata[[i]]$steps)] <- Steps.Interval[i]
+}
+data.imputed <- do.call("rbind", splitdata)
+data.imputed  <- data.imputed[order(data.imputed$date) ,]
+```
+
+##Step 7
+###Histogram of the total number of steps taken each day after missing values are imputed
+'Plotting histogram'
+```{r, echo = TRUE}
+png("plot6.png")
+  Steps.imputed <- tapply(data.imputed$steps, data.imputed$date, sum)
+  hist(Steps.imputed, xlab = "Steps per Day", ylim=c(0,40), main = "Total number of steps taken per day (Imputed data)",labels=TRUE, col = "blue4")
+dev.off()
+'Report mean and median for total number of steps taken per day'
+Mean.imputed <- mean(Steps.imputed, na.rm = TRUE)
+Median.imputed <- median(Steps.imputed, na.rm = TRUE)
+Mean.imputed
+Median.imputed
+```
+
+##Step 8
+###Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{r, echo = TRUE}
+'New factor variable in the dataset for weekday and weekend'
+data.imputed$day <- ifelse(weekdays(as.Date(data.imputed$date)) == "Saturday" | weekdays(as.Date(data.imputed$date)) == "Sunday", "weekend", "weekday")
+'Average steps per interval for weekdays'
+StepsPInt.weekday <- tapply(data.imputed[data.imputed$day == "weekday" ,]$steps, data.imputed[data.imputed$day == "weekday" ,]$interval, mean, na.rm = TRUE)
+'Average steps for internal for weekends'
+StepsPInt.weekend <- tapply(data.imputed[data.imputed$day == "weekend" ,]$steps, data.imputed[data.imputed$day == "weekend" ,]$interval, mean, na.rm = TRUE)
+'Two Panels Plot'
+png("plot8.png")
+par(mfrow=c(1,2))
+'Plot weekday activity'
+p1 <- plot(as.numeric(names(StepsPInt.weekday)), StepsPInt.weekday, xlab = "Interval", ylab = "Steps", 
+     ylim = c(0,250), main = "Activity Pattern - Weekdays", col="blue4", type = "b")
+'Plot weekend activity'
+p2 <- plot(as.numeric(names(StepsPInt.weekend)), StepsPInt.weekend, xlab = "Interval", ylab = "Steps", 
+     ylim = c(0,250), main = "Activity Pattern - weekends", col="red4", type = "b")
+dev.off()
+```
